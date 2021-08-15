@@ -1,0 +1,12 @@
+{
+  "plugins": ["plugins/markdown"],
+  "rescurseDepth": 10,
+  "source": {
+    "include": [
+      "lib"
+    ]
+  },
+  "templates": {
+    "monospaceLinks": true
+  }
+}
