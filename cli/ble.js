@@ -11,6 +11,7 @@ const events = require('events')
 const homebridgeLib = require('homebridge-lib')
 const BleClient = require('../lib/BleClient')
 const packageJson = require('../package.json')
+const { bufferToHex } = require('../lib/BleUtils')
 
 const { b, u } = homebridgeLib.CommandLineTool
 const { UsageError } = homebridgeLib.CommandLineParser
@@ -192,7 +193,7 @@ class Main extends homebridgeLib.CommandLineTool {
           )
           this.vvdebug(
             '%s: request %d: response buffer: %j', delegate.id,
-            response.request.id, response.buffer
+            response.request.id, bufferToHex(response.buffer)
           )
         }
       })
@@ -274,7 +275,7 @@ class Main extends homebridgeLib.CommandLineTool {
           await this.client.stopSearch()
           const delegate = this.createDelegate(device.peripheral)
           const map = await delegate.readAll()
-          const jsonFormatter = new homebridgeLib.JsonFormatter({ maxDepth: 2 })
+          const jsonFormatter = new homebridgeLib.JsonFormatter()
           this.print(jsonFormatter.stringify(map))
           await delegate.disconnect()
           process.exit(0)
