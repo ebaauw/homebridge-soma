@@ -24,10 +24,12 @@
   },
   "dependencies": {
     "@abandonware/noble": "^1.9.2-14",
-    "bluetooth-numbers-database": "github:NordicSemiconductor/bluetooth-numbers-database",
     "he": "^1.2.0",
     "homebridge-lib": "5.1.12-1",
     "xml2js": "^0.4.23"
+  },
+  "devDependencies": {
+    "bluetooth-numbers-database": "github:NordicSemiconductor/bluetooth-numbers-database"
   },
   "scripts": {
     "xprepare": "standard && rm -rf out && jsdoc -c jsdoc.json && cli/createBtDefinitions.js",
