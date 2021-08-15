@@ -42,7 +42,7 @@ This plugin communicates to the SOMA devices over Bluetooth Low Energy (BLE).
 While their Bluetooth API hasn't been published, Wazombi Labs OÜ have been very
 helpful providing me the information needed to communicate with the SOMA devices.
 
-This plugins uses [Noble](https://github.com/abandonware/noble) to access BLE
+This plugin uses [Noble](https://github.com/abandonware/noble) to access BLE
 from NodeJS.
 While no longer maintained by its original authors, the
 [Abandonware](https://abandonware.github.io) community have adopted Noble.
