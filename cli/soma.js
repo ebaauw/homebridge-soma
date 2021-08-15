@@ -10,6 +10,7 @@
 const homebridgeLib = require('homebridge-lib')
 const SomaClient = require('../lib/SomaClient')
 const packageJson = require('../package.json')
+const { bufferToHex } = require('../lib/BleUtils')
 
 const { b, u } = homebridgeLib.CommandLineTool
 const { UsageError } = homebridgeLib.CommandLineParser
@@ -191,7 +192,7 @@ class Main extends homebridgeLib.CommandLineTool {
           )
           this.vvdebug(
             '%s: request %d: response buffer: %j', delegate.id,
-            response.request.id, response.buffer
+            response.request.id, bufferToHex(response.buffer)
           )
         }
       })
@@ -243,13 +244,15 @@ class Main extends homebridgeLib.CommandLineTool {
       })
       .parse(...args)
     address = this.checkAddress(address)
+    let found = false
     this.client.on('deviceFound', async (device) => {
       try {
-        if (device.address === address) {
+        if (device.address === address && !found) {
+          found = true
           await this.client.stopSearch()
           const delegate = this.createDelegate(device.peripheral)
           const map = await delegate.readAll()
-          const jsonFormatter = new homebridgeLib.JsonFormatter({ maxDepth: 2 })
+          const jsonFormatter = new homebridgeLib.JsonFormatter()
           this.print(jsonFormatter.stringify(map))
           await delegate.disconnect()
           process.exit(0)
