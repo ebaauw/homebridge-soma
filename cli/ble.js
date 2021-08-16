@@ -118,7 +118,7 @@ class Main extends homebridgeLib.CommandLineTool {
           this.debug('found %s%s%s%s', device.id, name, manufacturer, address)
           this.vdebug(
             'found %s%s%s%s %j', device.id, name, manufacturer, address,
-            device.peripheral.advertisement
+            bufferToHex(device.manufacturerData)
           )
         })
       this.name = 'ble ' + this._clargs.command
