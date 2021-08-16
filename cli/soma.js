@@ -104,7 +104,7 @@ class Main extends homebridgeLib.CommandLineTool {
         .on('disabled', () => { this.fatal('bluetooth disabled') })
         .on('searching', () => { this.debug('searching...') })
         .on('stopSearching', () => { this.debug('search ended') })
-        .on('deviceFound', async (device) => {
+        .on('shadeFound', async (device) => {
           const name = device.name != null
             ? ' [' + device.name + ']'
             : ''
@@ -114,14 +114,17 @@ class Main extends homebridgeLib.CommandLineTool {
           const address = device.address != null
             ? ' at ' + device.address
             : ''
-          this.debug('found %s%s%s%s', device.id, name, manufacturer, address)
+          this.debug(
+            'found %s%s%s%s %j', device.id, name, manufacturer, address,
+            device.data
+          )
           this.vdebug(
             'found %s%s%s%s %j', device.id, name, manufacturer, address,
-            device.peripheral.advertisement
+            bufferToHex(device.manufacturerData)
           )
         })
-      this.name = 'ble ' + this._clargs.command
-      this.usage = `${b('ble')} ${usage[this._clargs.command]}`
+      this.name = 'soma ' + this._clargs.command
+      this.usage = `${b('soma')} ${usage[this._clargs.command]}`
       this.help = help[this._clargs.command]
       await this[this._clargs.command](this._clargs.args)
     } catch (error) {
@@ -205,12 +208,12 @@ class Main extends homebridgeLib.CommandLineTool {
     parser.parse(...args)
     this.client
       .on('shadeFound', async (device) => {
-        const name = device.displayName != null
-          ? ' [' + device.displayName + ']'
+        const name = device.data.displayName != null
+          ? ' [' + device.data.displayName + ']'
           : ''
         this.log(
           'found %s%s at %s [position: %d, battery: %j%%]', device.id, name,
-          device.address, device.currentPosition, device.battery
+          device.address, device.data.currentPosition, device.data.battery
         )
       })
       .on('stopSearching', async () => {
