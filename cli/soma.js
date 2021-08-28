@@ -18,7 +18,7 @@ const { UsageError } = homebridgeLib.CommandLineParser
 const usage = {
   soma: `${b('soma')} [${b('-hVD')}] [${b('-t')} ${u('timeout')}] ${u('command')} [${u('argument')} ...]`,
   discover: `${b('discover')} [${b('-h')}]`,
-  probe: `${b('probe')} [${b('-h')}] ${u('id')}`
+  probe: `${b('probe')} [${b('-h')}] ${u('device')}`
 }
 
 const description = {
@@ -68,8 +68,8 @@ Parameters:
   ${b('-h')}, ${b('--help')}
   Print this help and exit.
 
-  ${u('id')}
-  ID of the device to probe.`
+  ${u('device')}
+  Display name or mac address of the device to probe.`
 }
 
 class Main extends homebridgeLib.CommandLineTool {
@@ -102,8 +102,12 @@ class Main extends homebridgeLib.CommandLineTool {
           this.debug('bluetooth enabled [%s on %s]', platform, arch)
         })
         .on('disabled', () => { this.fatal('bluetooth disabled') })
-        .on('searching', () => { this.debug('searching...') })
-        .on('stopSearching', () => { this.debug('search ended') })
+        .on('scanStart', (me) => {
+          this.warn('scanning started by %s', me ? 'me' : 'someone else')
+        })
+        .on('scanStop', (me) => {
+          this.warn('scanning stopped by %s', me ? 'me' : 'someone else')
+        })
         .on('shadeFound', async (device) => {
           const name = device.name != null
             ? ' [' + device.name + ']'
@@ -188,14 +192,17 @@ class Main extends homebridgeLib.CommandLineTool {
           '%s: request %d: %s: ok', delegate.id, response.request.id,
           response.request.request
         )
-        if (response.buffer != null) {
+        if (response.parsedValue != null) {
           this.vdebug(
-            '%s: request %d: response: %j', delegate.id, response.request.id,
-            response.parsedValue
+            '%s: request %d: %s: response: %j', delegate.id, response.request.id,
+            response.request.request, response.parsedValue
           )
+        }
+        if (response.buffer != null) {
           this.vvdebug(
-            '%s: request %d: response buffer: %j', delegate.id,
-            response.request.id, bufferToHex(response.buffer)
+            '%s: request %d: %s: response buffer: %j', delegate.id,
+            response.request.id, response.request.request,
+            bufferToHex(response.buffer)
           )
         }
       })
@@ -227,7 +234,8 @@ class Main extends homebridgeLib.CommandLineTool {
         `Missing peripheral mac address.  Set ${b('BLE_PERIPHERAL')} or specify ${b('-S')}.`
       )
     } else if (!homebridgeLib.OptionParser.patterns.mac.test(address)) {
-      throw new UsageError(`${address}: invalid mac address`)
+      return address
+      // throw new UsageError(`${address}: invalid mac address`)
     }
     return address.toUpperCase().replace(/[-]/g, ':')
   }
@@ -248,11 +256,11 @@ class Main extends homebridgeLib.CommandLineTool {
       .parse(...args)
     address = this.checkAddress(address)
     let found = false
-    this.client.on('deviceFound', async (device) => {
+    this.client.on('shadeFound', async (device) => {
       try {
-        if (device.address === address && !found) {
+        if ((device.address === address || device.data.displayName === address) && !found) {
           found = true
-          await this.client.stopSearch()
+          // await this.client.stopSearch()
           const delegate = this.createDelegate(device.peripheral)
           const map = await delegate.readAll()
           const jsonFormatter = new homebridgeLib.JsonFormatter()
