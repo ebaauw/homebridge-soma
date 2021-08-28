@@ -103,8 +103,12 @@ class Main extends homebridgeLib.CommandLineTool {
           this.debug('bluetooth enabled [%s on %s]', platform, arch)
         })
         .on('disabled', () => { this.fatal('bluetooth disabled') })
-        .on('searching', () => { this.debug('searching...') })
-        .on('stopSearching', () => { this.debug('search ended') })
+        .on('scanStart', (me) => {
+          this.debug('scanning started by %s', me ? 'me' : 'someone else')
+        })
+        .on('scanStop', (me) => {
+          this.debug('scanning stopped by %s', me ? 'me' : 'someone else')
+        })
         .on('deviceFound', async (device) => {
           const name = device.name != null
             ? ' [' + device.name + ']'
@@ -186,14 +190,17 @@ class Main extends homebridgeLib.CommandLineTool {
           '%s: request %d: %s: ok', delegate.id, response.request.id,
           response.request.request
         )
-        if (response.buffer != null) {
+        if (response.parsedValue != null) {
           this.vdebug(
-            '%s: request %d: response: %j', delegate.id, response.request.id,
-            response.parsedValue
+            '%s: request %d: %s: response: %j', delegate.id, response.request.id,
+            response.request.request, response.parsedValue
           )
+        }
+        if (response.buffer != null) {
           this.vvdebug(
-            '%s: request %d: response buffer: %j', delegate.id,
-            response.request.id, bufferToHex(response.buffer)
+            '%s: request %d: %s: response buffer: %j', delegate.id,
+            response.request.id, response.request.request,
+            bufferToHex(response.buffer)
           )
         }
       })
