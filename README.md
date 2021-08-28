@@ -29,13 +29,37 @@ to Apple's [HomeKit](https://www.apple.com/ios/home/).
 This plugin is still under development.
 It is my first venture into Bluetooth, so I expect some ironing before it
 will be stable.
-Currently, the plugin discovers and monitors the shades, logging state changes.
-However, it does not yet expose any accessories to HomeKit.
+If you're looking for a stable plugin, check out
+[Homebridge SC](https://github.com/ebaauw/homebridge-sc).
+
+Currently, Homebridge SOMA provides the following features:
+- Automatic discovery of SOMA devices.  Each device is exposed as a HomeKit
+accessory with a _Window Covering_, a _Light Sensor_, and a _Battery_ service.
+The _Window Covering_ service carries custom characteristics _Close Upwards_
+(for Tilt devices), _Last Seen_, _Log Level_,
+and _Morning Mode_ (not yet implemented);
+- Updating _Current Position_ and _Battery Level_ from the BLE advertisements;
+- Setting the position through _Target Position_ and, for Tilt devices,
+_Close Upwards_;
+- Stopping current movement through _Hold Position_;
+- Playing a sound on the device on _Identify_;
+- Polling the device every 5 minutes for _Battery Charging State_ and
+_Current Ambient Light Level_.  Note that _Current Ambient Light Level_
+currently reports the raw value reported by the solar panel.
+
 The `discover` and `probe` commands of the `ble` and `soma` command-line tools
 are functional.
 
-If you're looking for a functional plugin, check out
-[Homebridge SC](https://github.com/ebaauw/homebridge-sc).
+Still to do:
+- Variable polling rate (through _Heartrate_ characteristic);
+- Implement _Morning Mode_;
+- Allow changing the motor speed from HomeKit;
+- Sync the device clock, for when you don't use the Smart Shades app
+nor SOMA Connect.
+- Report sunrise and sunset times as computed by the device;
+- Expose a custom service per trigger to enable/disable the trigger from HomeKit.
+- Additional commands for `soma` to interact with the device from the command
+line and/or shell scripts.
 
 ### Bluetooth Low Energy (BLE)
 This plugin communicates to the SOMA devices over Bluetooth Low Energy (BLE).
@@ -69,8 +93,7 @@ and to allow NodeJS to access the BLE hardware:
 ```
 sudo setcap cap_net_raw+eip $(eval readlink -f `which node`)
 ```
-
-Note that this plugin is still under development.
+Note that this command needs to be repeated after each update of NodeJS.
 
 ### Command-Line Tool
 Homebridge SOMA includes two command-line tools, `ble`, to interact with generic
