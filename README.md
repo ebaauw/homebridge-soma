@@ -46,6 +46,8 @@ _Close Upwards_;
 - Polling the device every 5 minutes for _Battery Charging State_ and
 _Current Ambient Light Level_.  Note that _Current Ambient Light Level_
 currently reports the raw value reported by the solar panel.
+- Polling the device every 5 minutes for triggers.
+- Enabling/disabling triggers.
 
 The `discover` and `probe` commands of the `ble` and `soma` command-line tools
 are functional.
@@ -56,8 +58,8 @@ Still to do:
 - Allow changing the motor speed from HomeKit;
 - Sync the device clock, for when you don't use the Smart Shades app
 nor SOMA Connect.
-- Report sunrise and sunset times as computed by the device;
-- Expose a custom service per trigger to enable/disable the trigger from HomeKit.
+- ~~Report sunrise and sunset times as computed by the device;~~ in v0.0.10
+- ~~Expose a custom service per trigger to enable/disable the trigger from HomeKit.~~ in v0.0.10
 - Additional commands for `soma` to interact with the device from the command
 line and/or shell scripts.
 
