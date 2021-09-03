@@ -215,11 +215,10 @@ class Main extends homebridgeLib.CommandLineTool {
     parser.parse(...args)
     this.client
       .on('shadeFound', async (device) => {
-        const name = device.data.displayName != null
-          ? ' [' + device.data.displayName + ']'
-          : ''
+        const type = device.data.supportsUp ? 'Tilt' : 'Smart Shades'
         this.log(
-          'found %s%s at %s [position: %d, battery: %j%%]', device.id, name,
+          'found %s %s [%s] at %s [position: %j%%, battery: %j%%]',
+          type, device.id, device.data.displayName,
           device.address, device.data.currentPosition, device.data.battery
         )
       })
