@@ -7,7 +7,7 @@
 
 'use strict'
 
-const events = require('events')
+// const events = require('events')
 const homebridgeLib = require('homebridge-lib')
 const BleClient = require('../lib/BleClient')
 const packageJson = require('../package.json')
@@ -86,10 +86,13 @@ class Main extends homebridgeLib.CommandLineTool {
       this.client
         .on('error', (error) => {
           if (error instanceof BleClient.BleError) {
-            this.debug('request %d: %s', error.request.id, error)
+            this.warn(
+              'request %d: %s: %s', error.request.id, error.request.request,
+              error
+            )
             return
           }
-          this.warn(error)
+          this.error(error)
         })
         .on('request', (request) => {
           this.debug('request: %d: %s', request.id, request.request)
@@ -99,8 +102,11 @@ class Main extends homebridgeLib.CommandLineTool {
             'request %d: %s: ok', response.request.id, response.request.request
           )
         })
-        .on('enabled', (platform, arch) => {
-          this.debug('bluetooth enabled [%s on %s]', platform, arch)
+        .on('enabled', (supported, platform, arch) => {
+          this.debug('bluetooth enabled, %s on %s', platform, arch)
+          if (!supported) {
+            this.warn('unsupported platform, %s on %s', platform, arch)
+          }
         })
         .on('disabled', () => { this.fatal('bluetooth disabled') })
         .on('scanStart', (me) => {
@@ -119,8 +125,8 @@ class Main extends homebridgeLib.CommandLineTool {
           const address = device.address != null
             ? ' at ' + device.address
             : ''
-          this.debug('found %s%s%s%s', device.id, name, manufacturer, address)
-          this.vdebug(
+          this.vdebug('found %s%s%s%s', device.id, name, manufacturer, address)
+          this.vvdebug(
             'found %s%s%s%s %j', device.id, name, manufacturer, address,
             bufferToHex(device.manufacturerData)
           )
@@ -130,7 +136,7 @@ class Main extends homebridgeLib.CommandLineTool {
       this.help = help[this._clargs.command]
       await this[this._clargs.command](this._clargs.args)
     } catch (error) {
-      this.error('%s', error)
+      this.error(error)
       process.exit(-1)
     }
   }
@@ -176,33 +182,43 @@ class Main extends homebridgeLib.CommandLineTool {
       .on('error', (error) => {
         if (error instanceof BleClient.BleError) {
           if (bleError || this.debug) {
-            this.warn('%s: request %d: %s', delegate.id, error.request.id, error)
+            this.warn(
+              '%s: request %d: %s', delegate.id, error.request.id,
+              error.request.request, error
+            )
           }
           return
         }
-        this.warn('%s: %s', delegate.id, error)
+        this.error('%s: %s', delegate.id, error)
       })
       .on('request', (request) => {
         this.debug('%s: request %d: %s', delegate.id, request.id, request.request)
       })
       .on('response', (response) => {
-        this.debug(
-          '%s: request %d: %s: ok', delegate.id, response.request.id,
-          response.request.request
-        )
-        if (response.parsedValue != null) {
-          this.vdebug(
+        if (response.parsedValue == null) {
+          this.debug(
+            '%s: request %d: %s: ok', delegate.id, response.request.id,
+            response.request.request
+          )
+        } else {
+          this.debug(
             '%s: request %d: %s: response: %j', delegate.id, response.request.id,
             response.request.request, response.parsedValue
           )
         }
         if (response.buffer != null) {
-          this.vvdebug(
+          this.vdebug(
             '%s: request %d: %s: response buffer: %j', delegate.id,
             response.request.id, response.request.request,
             bufferToHex(response.buffer)
           )
         }
+      })
+      .on('connected', () => {
+        this.debug('%s: connected', delegate.id)
+      })
+      .on('disconnected', () => {
+        this.debug('%s: disconnected', delegate.id)
       })
     return delegate
   }
@@ -211,8 +227,8 @@ class Main extends homebridgeLib.CommandLineTool {
     const parser = new homebridgeLib.CommandLineParser(packageJson)
     parser.help('h', 'help', this.help)
     parser.parse(...args)
-    const emitter = new events.EventEmitter()
-    let jobs = 0
+    // const emitter = new events.EventEmitter()
+    // let jobs = 0
     this.client
       .on('deviceFound', async (device) => {
         const name = device.name != null
@@ -222,30 +238,29 @@ class Main extends homebridgeLib.CommandLineTool {
           ? ' by ' + device.manufacturer.name
           : ''
         const delegate = this.createDelegate(device.peripheral, false)
-        if (delegate.address == null && this.client.macOs) {
-          jobs++
-          try {
-            await delegate.connect()
-            await delegate.disconnect()
-          } catch (error) {
-            if (!(error instanceof BleClient.BleError)) {
-              this.warn(error)
-            }
-          }
-          jobs--
-          emitter.emit('done')
-        }
+        // if (delegate.address == null && this.client.macOs) {
+        //   jobs++
+        //   try {
+        //     await delegate.connect()
+        //     await delegate.disconnect()
+        //   } catch (error) {
+        //     if (!(error instanceof BleClient.BleError)) {
+        //       this.warn(error)
+        //     }
+        //   }
+        //   jobs--
+        //   emitter.emit('done')
+        // }
         if (delegate.address != null) {
           this.log(
-            'found %s%s%s at %s', delegate.id, name, manufacturer,
-            delegate.address
+            '%s:%s%s', delegate.address, name, manufacturer
           )
         }
       })
       .on('stopSearching', async () => {
-        while (jobs > 0) { // eslint-disable-line no-unmodified-loop-condition
-          await events.once(emitter, 'done')
-        }
+        // while (jobs > 0) { // eslint-disable-line no-unmodified-loop-condition
+        //   await events.once(emitter, 'done')
+        // }
         process.exit(0)
       })
   }
