@@ -85,10 +85,13 @@ class Main extends homebridgeLib.CommandLineTool {
       this.client
         .on('error', (error) => {
           if (error instanceof SomaClient.BleError) {
-            this.debug('request %d: %s', error.request.id, error)
+            this.warn(
+              'request %d: %s: %s', error.request.id, error.request.request,
+              error
+            )
             return
           }
-          this.warn(error)
+          this.error(error)
         })
         .on('request', (request) => {
           this.debug('request: %d: %s', request.id, request.request)
@@ -98,15 +101,18 @@ class Main extends homebridgeLib.CommandLineTool {
             'request %d: %s: ok', response.request.id, response.request.request
           )
         })
-        .on('enabled', (platform, arch) => {
-          this.debug('bluetooth enabled [%s on %s]', platform, arch)
+        .on('enabled', (supported, platform, arch) => {
+          this.debug('bluetooth enabled, %s on %s', platform, arch)
+          if (!supported) {
+            this.warn('unsupported platform, %s on %s', platform, arch)
+          }
         })
         .on('disabled', () => { this.fatal('bluetooth disabled') })
         .on('scanStart', (me) => {
-          this.warn('scanning started by %s', me ? 'me' : 'someone else')
+          this.debug('scanning started by %s', me ? 'me' : 'someone else')
         })
         .on('scanStop', (me) => {
-          this.warn('scanning stopped by %s', me ? 'me' : 'someone else')
+          this.debug('scanning stopped by %s', me ? 'me' : 'someone else')
         })
         .on('shadeFound', async (device) => {
           const name = device.name != null
@@ -118,11 +124,11 @@ class Main extends homebridgeLib.CommandLineTool {
           const address = device.address != null
             ? ' at ' + device.address
             : ''
-          this.debug(
+          this.vdebug(
             'found %s%s%s%s %j', device.id, name, manufacturer, address,
             device.data
           )
-          this.vdebug(
+          this.vvdebug(
             'found %s%s%s%s %j', device.id, name, manufacturer, address,
             bufferToHex(device.manufacturerData)
           )
@@ -132,7 +138,7 @@ class Main extends homebridgeLib.CommandLineTool {
       this.help = help[this._clargs.command]
       await this[this._clargs.command](this._clargs.args)
     } catch (error) {
-      this.error('%s', error)
+      this.error(error)
       process.exit(-1)
     }
   }
@@ -178,34 +184,55 @@ class Main extends homebridgeLib.CommandLineTool {
       .on('error', (error) => {
         if (error instanceof SomaClient.BleError) {
           if (bleError || this.debug) {
-            this.warn('%s: request %d: %s', delegate.id, error.request.id, error)
+            this.warn(
+              '%s: request %d: %s: %s', delegate.id, error.request.id,
+              error.request.request, error
+            )
           }
           return
         }
-        this.warn('%s: %s', delegate.id, error)
+        this.error('%s: %s', delegate.id, error)
       })
       .on('request', (request) => {
         this.debug('%s: request %d: %s', delegate.id, request.id, request.request)
       })
       .on('response', (response) => {
-        this.debug(
-          '%s: request %d: %s: ok', delegate.id, response.request.id,
-          response.request.request
-        )
-        if (response.parsedValue != null) {
-          this.vdebug(
+        if (response.parsedValue == null) {
+          this.debug(
+            '%s: request %d: %s: ok', delegate.id, response.request.id,
+            response.request.request
+          )
+        } else {
+          this.debug(
             '%s: request %d: %s: response: %j', delegate.id, response.request.id,
             response.request.request, response.parsedValue
           )
         }
         if (response.buffer != null) {
-          this.vvdebug(
+          this.vdebug(
             '%s: request %d: %s: response buffer: %j', delegate.id,
             response.request.id, response.request.request,
             bufferToHex(response.buffer)
           )
         }
       })
+      .on('connected', () => {
+        this.debug('%s: connected', delegate.id)
+      })
+      .on('disconnected', () => {
+        this.debug('%s: disconnected', delegate.id)
+      })
+      .on('notification', (notification) => {
+        this.vdebug(
+          'notification: %s/%s: %s', notification.serviceKey,
+          notification.key, bufferToHex(notification.buffer)
+        )
+        this.debug(
+          'notification: %s/%s: %j', notification.serviceKey,
+          notification.key, notification.parsedValue
+        )
+      })
+
     return delegate
   }
 
@@ -213,14 +240,18 @@ class Main extends homebridgeLib.CommandLineTool {
     const parser = new homebridgeLib.CommandLineParser(packageJson)
     parser.help('h', 'help', this.help)
     parser.parse(...args)
+    const found = {}
     this.client
       .on('shadeFound', async (device) => {
-        const type = device.data.supportsUp ? 'Tilt' : 'Smart Shades'
-        this.log(
-          'found %s %s [%s] at %s [position: %j%%, battery: %j%%]',
-          type, device.id, device.data.displayName,
-          device.address, device.data.currentPosition, device.data.battery
-        )
+        if (found[device.id] == null) {
+          found[device.id] = device
+          const type = device.data.supportsUp ? 'Tilt' : 'Smart Shades'
+          this.log(
+            '%s: %s (%s), position: %j%%, battery: %j%%',
+            device.address, device.data.displayName, type,
+            device.data.currentPosition, device.data.battery
+          )
+        }
       })
       .on('stopSearching', async () => {
         process.exit(0)
