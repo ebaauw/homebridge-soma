@@ -74,6 +74,9 @@ The polling rate can be set dynamically using _Heartrate_.
 Issue _Identify_ (on the _Accessory Information_ service) to force poll the
 device immediately, and to play a sound on the device.
 
+- Keep the device clock and timezone offset in sync with the server running
+Homebridge, for when you don't use the SOMA Connect nor SOMA Smart Shades app.
+
 Note that Apple's Home app doesn't support custom services nor characteristics.
 To use the full features of Homebridge SOMA, you need a decent HomeKit app,
 like [Eve](https://www.evehome.com/en-us/eve-app).
@@ -93,8 +96,6 @@ If you're looking for a stable plugin, check out
 
 Still to do:
 - Implement _Morning Mode_;
-- Sync the device clock, for when you don't use the Smart Shades app
-nor SOMA Connect.
 - Additional commands for `soma` to interact with the device from the command
 line and/or shell scripts.
 
