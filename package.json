@@ -24,7 +24,7 @@
     "soma": "2.2.9"
   },
   "dependencies": {
-    "@abandonware/noble": "^1.9.2-14",
+    "@homebridge/noble": "^1.9.2",
     "he": "^1.2.0",
     "homebridge-lib": "5.1.13",
     "semver": "^7.3.5",
@@ -32,8 +32,7 @@
   },
   "scripts": {
     "prepare": "standard && rm -rf out && jsdoc -c jsdoc.json",
-    "test": "standard && echo \"Error: no test specified\" && exit 1",
-    "postinstall": "cp .patch/hci.js node_modules/@abandonware/noble/lib/hci-socket"
+    "test": "standard && echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
