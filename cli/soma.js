@@ -18,13 +18,27 @@ const { UsageError } = homebridgeLib.CommandLineParser
 const usage = {
   soma: `${b('soma')} [${b('-hVD')}] [${b('-t')} ${u('timeout')}] ${u('command')} [${u('argument')} ...]`,
   discover: `${b('discover')} [${b('-h')}]`,
-  probe: `${b('probe')} [${b('-h')}] ${u('device')}`
+  probe: `${b('probe')} [${b('-h')}] ${u('device')}`,
+
+  info: `${b('info')} [${b('-h')}] ${u('device')}`,
+  open: `${b('open')} [${b('-h')}] ${u('device')}`,
+  close: `${b('close')} [${b('-h')}] ${u('device')} [${b('down')}|${b('up')}]`,
+  stop: `${b('stop')} [${b('-h')}] ${u('device')}`,
+
+  position: `${b('position')} [${b('-hm')}] ${u('device')} [${b('--')}] [${u('position')}]`
 }
 
 const description = {
   soma: 'Command line interface to SOMA devices.',
   discover: 'Discover SOMA devices.',
-  probe: 'Probe device.'
+  probe: 'Probe device.',
+
+  info: 'Get device info.',
+  open: 'Open device',
+  close: 'Close device',
+  stop: 'Stop current movement.',
+
+  position: 'Get or set position.'
 }
 
 const help = {
@@ -52,17 +66,32 @@ Commands:
   ${usage.probe}
   ${description.probe}
 
+  ${usage.info}
+  ${description.info}
+
+  ${usage.open}
+  ${description.open}
+
+  ${usage.close}
+  ${description.close}
+
+  ${usage.stop}
+  ${description.stop}
+
+  ${usage.position}
+  ${description.position}
+
 For more help, issue: ${b('soma')} ${u('command')} ${b('-h')}`,
   discover: `${description.discover}
 
-Usage: ${usage.discover}
+Usage: ${b('soma')} ${usage.discover}
 
 Parameters:
   ${b('-h')}, ${b('--help')}
   Print this help and exit.`,
   probe: `${description.probe}
 
-Usage: ${usage.probe}
+Usage: ${b('soma')} ${usage.probe}
 
 Parameters:
   ${b('-h')}, ${b('--help')}
@@ -137,8 +166,11 @@ class Main extends homebridgeLib.CommandLineTool {
       this.usage = `${b('soma')} ${usage[this._clargs.command]}`
       this.help = help[this._clargs.command]
       await this[this._clargs.command](this._clargs.args)
+      process.exit(0)
     } catch (error) {
-      this.error(error)
+      if (!(error instanceof SomaClient.BleError)) {
+        this.error(error)
+      }
       process.exit(-1)
     }
   }
@@ -178,8 +210,8 @@ class Main extends homebridgeLib.CommandLineTool {
     return clargs
   }
 
-  createDelegate (peripheral, bleError = true) {
-    const delegate = new SomaClient.SomaPeripheral(this.client, peripheral)
+  createDelegate (device, bleError = true) {
+    const delegate = new SomaClient.SomaPeripheral(this.client, device)
     delegate
       .on('error', (error) => {
         if (error instanceof SomaClient.BleError) {
@@ -236,7 +268,7 @@ class Main extends homebridgeLib.CommandLineTool {
     return delegate
   }
 
-  discover (...args) {
+  async discover (...args) {
     const parser = new homebridgeLib.CommandLineParser(packageJson)
     parser.help('h', 'help', this.help)
     parser.parse(...args)
@@ -253,26 +285,41 @@ class Main extends homebridgeLib.CommandLineTool {
           )
         }
       })
-      .on('stopSearching', async () => {
-        process.exit(0)
-      })
+    return homebridgeLib.timeout(this._clargs.options.timeout * 1000)
   }
 
-  checkAddress (address) {
+  async find (address = process.env.SOMA_DEVICE) {
     if (address == null || address === '') {
       throw new UsageError(
-        `Missing peripheral mac address.  Set ${b('BLE_PERIPHERAL')} or specify ${b('-S')}.`
+        `Missing device name or mac address.  Set ${b('SOMA_DEVICE')} or specify ${b('-S')}.`
       )
-    } else if (!homebridgeLib.OptionParser.patterns.mac.test(address)) {
-      return address
-      // throw new UsageError(`${address}: invalid mac address`)
+    } else if (homebridgeLib.OptionParser.patterns.mac.test(address)) {
+      address = address.toUpperCase().replace(/[-]/g, ':')
     }
-    return address.toUpperCase().replace(/[-]/g, ':')
+    return new Promise((resolve, reject) => {
+      let found = false
+      const timer = setTimeout(() => {
+        reject(new Error(`${address}: device not found`))
+      }, this._clargs.options.timeout * 1000)
+      this.client.on('shadeFound', async (device) => {
+        try {
+          if ((device.address === address || device.data.displayName === address) && !found) {
+            found = true
+            clearTimeout(timer)
+            resolve(this.createDelegate(device))
+          }
+        } catch (error) {
+          if (!(error instanceof SomaClient.BleError)) {
+            this.warn(error)
+          }
+        }
+      })
+    })
   }
 
-  probe (...args) {
+  async _parse (...args) {
+    let address
     const parser = new homebridgeLib.CommandLineParser(packageJson)
-    let address = process.env.BLE_PERIPHERAL
     parser
       .help('h', 'help', this.help)
       .remaining((list) => {
@@ -284,27 +331,28 @@ class Main extends homebridgeLib.CommandLineTool {
         }
       })
       .parse(...args)
-    address = this.checkAddress(address)
-    let found = false
-    this.client.on('shadeFound', async (device) => {
-      try {
-        if ((device.address === address || device.data.displayName === address) && !found) {
-          found = true
-          // await this.client.stopSearch()
-          const delegate = this.createDelegate(device.peripheral)
-          const map = await delegate.readAll()
-          const jsonFormatter = new homebridgeLib.JsonFormatter()
-          this.print(jsonFormatter.stringify(map))
-          await delegate.disconnect()
-          process.exit(0)
-        }
-      } catch (error) {
-        if (!(error instanceof SomaClient.BleError)) {
-          this.warn(error)
-        }
-        process.exit(-1)
-      }
-    })
+    return this.find(address)
+  }
+
+  async probe (...args) {
+    const delegate = await this._parse(...args)
+    const map = await delegate.readAll()
+    await delegate.disconnect()
+    const jsonFormatter = new homebridgeLib.JsonFormatter()
+    this.print(jsonFormatter.stringify(map))
+  }
+
+  async info (delegate) {
+
+  }
+
+  async open (...args) {
+    const delegate = await this._parse(...args)
+    await delegate.open()
+  }
+
+  async close (...args) {
+
   }
 }
 
