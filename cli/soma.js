@@ -277,7 +277,7 @@ class Main extends homebridgeLib.CommandLineTool {
       .on('shadeFound', async (device) => {
         if (found[device.id] == null) {
           found[device.id] = device
-          const type = device.data.supportsUp ? 'Tilt' : 'Smart Shades'
+          const type = device.data.venetianMode ? 'Tilt' : 'Smart Shades'
           this.log(
             '%s: %s (%s), position: %j%%, battery: %j%%',
             device.address, device.data.displayName, type,
