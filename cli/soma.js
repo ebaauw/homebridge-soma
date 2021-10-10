@@ -154,12 +154,12 @@ class Main extends homebridgeLib.CommandLineTool {
             ? ' at ' + device.address
             : ''
           this.vdebug(
-            'found %s%s%s%s %j', device.id, name, manufacturer, address,
-            device.data
+            'found %s%s%s%s, rssi: %d, data: %j', device.id, name, manufacturer,
+            address, device.peripheral.rssi, device.data
           )
           this.vvdebug(
-            'found %s%s%s%s %j', device.id, name, manufacturer, address,
-            bufferToHex(device.manufacturerData)
+            'found %s%s%s%s, rssi: %d, data: %j', device.id, name, manufacturer,
+            address, device.peripheral.rssi, bufferToHex(device.manufacturerData)
           )
         })
       this.name = 'soma ' + this._clargs.command
@@ -279,9 +279,10 @@ class Main extends homebridgeLib.CommandLineTool {
           found[device.id] = device
           const type = device.data.venetianMode ? 'Tilt' : 'Smart Shades'
           this.log(
-            '%s: %s (%s), position: %j%%, battery: %j%%',
+            '%s: %s (%s), position: %j%%, battery: %j%%, rssi: %d',
             device.address, device.data.displayName, type,
-            device.data.currentPosition, device.data.battery
+            device.data.currentPosition, device.data.battery,
+            device.peripheral.rssi
           )
         }
       })
