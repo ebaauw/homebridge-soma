@@ -214,8 +214,8 @@ class Main extends homebridgeLib.CommandLineTool {
           )
         }
       })
-      .on('connected', () => {
-        this.debug('%s: connected', delegate.id)
+      .on('connected', (rssi) => {
+        this.debug('%s: connected (rssi: %d)', delegate.id, rssi)
       })
       .on('disconnected', () => {
         this.debug('%s: disconnected', delegate.id)
