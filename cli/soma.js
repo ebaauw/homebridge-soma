@@ -16,7 +16,7 @@ const { b, u } = homebridgeLib.CommandLineTool
 const { UsageError } = homebridgeLib.CommandLineParser
 
 const usage = {
-  soma: `${b('soma')} [${b('-hVD')}] [${b('-t')} ${u('timeout')}] ${u('command')} [${u('argument')} ...]`,
+  soma: `${b('soma')} [${b('-hVD')}] [${b('-r')} ${u('rssi')}] [${b('-t')} ${u('timeout')}] ${u('command')} [${u('argument')} ...]`,
   discover: `${b('discover')} [${b('-h')}]`,
   probe: `${b('probe')} [${b('-h')}] ${u('device')}`,
 
@@ -55,6 +55,9 @@ Parameters:
 
   ${b('-D')}, ${b('--debug')}
   Print debug messages.
+
+  ${b('-r')} ${u('rssi')}, ${b('--rssi=')}${u('rssi')}
+  Set minimum RSSI to ${u('rssi')} instead of default ${b('-100')}.
 
   ${b('-t')} ${u('timeout')}, ${b('--timeout=')}${u('timeout')}
   Set timeout to ${u('timeout')} seconds instead of default ${b('15')}.
@@ -110,7 +113,7 @@ class Main extends homebridgeLib.CommandLineTool {
   async main () {
     try {
       this._clargs = this.parseArguments()
-      this.client = new SomaClient()
+      this.client = new SomaClient({ rssi: this._clargs.options.rssi })
       this.client
         .on('error', (error) => {
           if (error instanceof SomaClient.BleError) {
@@ -179,6 +182,7 @@ class Main extends homebridgeLib.CommandLineTool {
     const parser = new homebridgeLib.CommandLineParser(packageJson)
     const clargs = {
       options: {
+        rssi: -100,
         timeout: 15
       }
     }
@@ -193,6 +197,11 @@ class Main extends homebridgeLib.CommandLineTool {
         } else {
           this.setOptions({ debug: true, chalk: true })
         }
+      })
+      .option('r', 'rssi', (value) => {
+        clargs.options.rssi = homebridgeLib.OptionParser.toInt(
+          'rssi', value, -100, -50, true
+        )
       })
       .option('t', 'timeout', (value) => {
         clargs.options.timeout = homebridgeLib.OptionParser.toInt(
