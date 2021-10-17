@@ -13,6 +13,12 @@
         "required": true,
         "default": "SOMA"
       },
+      "rssi": {
+        "description": "Minimum RSSI value to expose SOMA device.  Default: -100.",
+        "type": "integer",
+        "minimum": -100,
+        "maximum": -50
+      },
       "timeout":
       {
         "description": "The timeout in seconds to wait for a response from a SOMA device.  Default: 15.",
@@ -30,6 +36,7 @@
       "title": "Advanced Settings",
       "description": "Don't change these, unless you understand what you're doing.",
       "items": [
+        "rssi",
         "timeout"
       ]
     }
