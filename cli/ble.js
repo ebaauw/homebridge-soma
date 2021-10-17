@@ -262,7 +262,8 @@ class Main extends homebridgeLib.CommandLineTool {
         // }
         if (delegate.address != null) {
           this.log(
-            '%s:%s%s', delegate.address, name, manufacturer
+            '%s:%s%s (rssi: %d)', delegate.address, name, manufacturer,
+            device.peripheral.rssi
           )
         }
       })
