@@ -19,6 +19,15 @@
         "minimum": -100,
         "maximum": -50
       },
+      "shades": {
+        "title": "Device",
+        "type": "array",
+        "items": {
+          "title": "Device",
+          "description": "Name or MAC address of SOMA device to expose.",
+          "type": "string"
+        }
+      },
       "timeout":
       {
         "description": "The timeout in seconds to wait for a response from a SOMA device.  Default: 15.",
@@ -30,6 +39,34 @@
   },
   "form": [
     "name",
+    {
+      "type": "fieldset",
+      "expandable": true,
+      "title": "Whitelist Devices",
+      "description": "By default, Homebridge SOMA exposes all discovered SOMA devices.  Use this whitelist to expose listed devices only.",
+      "items": [
+        {
+          "nodescription": true,
+          "notitle": true,
+          "key": "shades",
+          "type": "array",
+          "items": [
+            {
+              "type": "div",
+              "displayFlex": true,
+              "flex-direction": "row",
+              "items": [
+                {
+                  "key": "shades[]",
+                  "required": true,
+                  "flex": "1 1 50px"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
     {
       "type": "fieldset",
       "expandable": true,
