@@ -24,7 +24,7 @@
     "soma": "2.2.10"
   },
   "dependencies": {
-    "@homebridge/noble": "^1.9.4-1",
+    "@abandonware/noble": "^1.9.2-15",
     "he": "^1.2.0",
     "homebridge-lib": "5.1.16",
     "semver": "^7.3.5",
