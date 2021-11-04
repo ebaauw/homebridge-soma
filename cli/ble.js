@@ -105,13 +105,20 @@ class Main extends homebridgeLib.CommandLineTool {
             'request %d: %s: ok', response.request.id, response.request.request
           )
         })
-        .on('enabled', (supported, platform, arch) => {
-          this.debug('bluetooth enabled, %s on %s', platform, arch)
-          if (!supported) {
-            this.warn('unsupported platform, %s on %s', platform, arch)
+        .on('enabled', (config) => {
+          this.debug('running on %s on %s', config.platform, config.arch)
+          if (!config.supported) {
+            this.warn('unsupported platform')
           }
+          this.debug('%s [%s] enabled', config.adapter, config.address)
         })
-        .on('disabled', () => { this.fatal('bluetooth disabled') })
+        .on('disabled', (config) => {
+          this.debug('running on %s on %s', config.platform, config.arch)
+          if (!config.supported) {
+            this.warn('unsupported platform')
+          }
+          this.fatal('%s [%s] disabled', config.adapter, config.address)
+        })
         .on('scanStart', (me) => {
           this.debug('scanning started by %s', me ? 'me' : 'someone else')
         })
