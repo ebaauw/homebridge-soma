@@ -14,7 +14,7 @@
         "default": "SOMA"
       },
       "resetInterval": {
-        "description": "Interval in minutes to reset Noble.  Default: 5.",
+        "description": "Interval in minutes to reset Noble.  Default: don't reset Noble.",
         "type": "integer",
         "minimum": 5,
         "maximum": 120
