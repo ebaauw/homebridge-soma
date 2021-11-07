@@ -13,6 +13,12 @@
         "required": true,
         "default": "SOMA"
       },
+      "resetInterval": {
+        "description": "Interval in minutes to reset Noble.  Default: 5.",
+        "type": "integer",
+        "minimum": 5,
+        "maximum": 120
+      },
       "rssi": {
         "description": "Minimum RSSI value to expose SOMA device.  Default: -100.",
         "type": "integer",
@@ -73,6 +79,7 @@
       "title": "Advanced Settings",
       "description": "Don't change these, unless you understand what you're doing.",
       "items": [
+        "resetInterval",
         "rssi",
         "timeout"
       ]
