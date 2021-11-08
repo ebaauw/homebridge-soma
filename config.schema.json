@@ -13,11 +13,11 @@
         "required": true,
         "default": "SOMA"
       },
-      "resetInterval": {
-        "description": "Interval in minutes to reset Noble.  Default: don't reset Noble.",
+      "restartInterval": {
+        "description": "Interval in hours to restart Homebridge SOMA.  Default: don't restart.",
         "type": "integer",
-        "minimum": 5,
-        "maximum": 120
+        "minimum": 1,
+        "maximum": 12
       },
       "rssi": {
         "description": "Minimum RSSI value to expose SOMA device.  Default: -100.",
@@ -79,7 +79,7 @@
       "title": "Advanced Settings",
       "description": "Don't change these, unless you understand what you're doing.",
       "items": [
-        "resetInterval",
+        "restartInterval",
         "rssi",
         "timeout"
       ]
