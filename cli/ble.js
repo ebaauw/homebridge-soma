@@ -106,7 +106,8 @@ class Main extends homebridgeLib.CommandLineTool {
           )
         })
         .on('enabled', (config) => {
-          this.debug('running on %s on %s', config.platform, config.arch)
+          this.debug('hardware: %s', config.hwInfo.prettyName)
+          this.debug('os: %s', config.osInfo.prettyName)
           if (!config.supported) {
             this.warn('unsupported platform')
           }
@@ -116,7 +117,8 @@ class Main extends homebridgeLib.CommandLineTool {
           )
         })
         .on('disabled', (config) => {
-          this.debug('running on %s on %s', config.platform, config.arch)
+          this.debug('hardware: %s', config.hwInfo.prettyName)
+          this.debug('os: %s', config.osInfo.prettyName)
           if (!config.supported) {
             this.warn('unsupported platform')
           }
