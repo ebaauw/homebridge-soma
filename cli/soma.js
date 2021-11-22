@@ -34,8 +34,8 @@ const description = {
   probe: 'Probe device.',
 
   info: 'Get device info.',
-  open: 'Open device',
-  close: 'Close device',
+  open: 'Open device.',
+  close: 'Close device.',
   stop: 'Stop current movement.',
 
   position: 'Get or set position.'
@@ -101,12 +101,82 @@ Parameters:
   Print this help and exit.
 
   ${u('device')}
-  Display name or mac address of the device to probe.`
+  Display name or mac address of the device.`,
+  info: `${description.info}
+
+Usage: ${b('soma')} ${usage.info}
+
+Parameters:
+  ${b('-h')}, ${b('--help')}
+  Print this help and exit.
+
+  ${u('device')}
+  Display name or mac address of the device.`,
+  close: `${description.close}
+
+Usage: ${b('soma')} ${usage.close}
+
+Parameters:
+  ${b('-h')}, ${b('--help')}
+  Print this help and exit.
+
+  ${u('device')}
+  Display name or mac address of the device.
+
+  [${b('down')}|${b('up')}]
+  Direction for Tilt devices.  Default ${b('down')}`,
+  open: `${description.open}
+
+Usage: ${b('soma')} ${usage.open}
+
+Parameters:
+  ${b('-h')}, ${b('--help')}
+  Print this help and exit.
+
+  ${u('device')}
+  Display name or mac address of the device.`,
+  stop: `${description.stop}
+
+Usage: ${b('soma')} ${usage.stop}
+
+Parameters:
+  ${b('-h')}, ${b('--help')}
+  Print this help and exit.
+
+  ${u('device')}
+  Display name or mac address of the device.`,
+  position: `${description.position}
+
+Usage: ${b('soma')} ${usage.position}
+
+Parameters:
+  ${b('-h')}, ${b('--help')}
+  Print this help and exit.
+
+  ${u('device')}
+  Display name or mac address of the device to probe.
+
+  ${u('position')}
+  Position to set the SOMA device to.
+  For Shades devices: from 0% (open) to 100% (closed).
+  For Tilt devices: from -100% (closed up) to 0% (open) to 100% (closed down).`
 }
 
 class Main extends homebridgeLib.CommandLineTool {
   constructor () {
     super()
+    process
+      .removeAllListeners('uncaughtException')
+      .on('uncaughtException', async (error) => {
+        await this.fatal('uncaught exception: %s', error.stack)
+        this.error('>>>> NOT HAPPENING <<<<')
+      })
+      .removeAllListeners('unhandledRejection')
+      .on('unhandledRejection', async (error) => {
+        await this.fatal('uncaught exception: %s', error.stack)
+        this.error('>>>> NOT HAPPENING <<<<')
+      })
+
     this.usage = usage.soma
   }
 
@@ -134,7 +204,8 @@ class Main extends homebridgeLib.CommandLineTool {
           )
         })
         .on('enabled', (config) => {
-          this.debug('running on %s on %s', config.platform, config.arch)
+          this.debug('hardware: %s', config.hwInfo.prettyName)
+          this.debug('os: %s', config.osInfo.prettyName)
           if (!config.supported) {
             this.warn('unsupported platform')
           }
@@ -143,12 +214,13 @@ class Main extends homebridgeLib.CommandLineTool {
             config.address == null ? '' : ' [' + config.address + ']'
           )
         })
-        .on('disabled', (config) => {
-          this.debug('running on %s on %s', config.platform, config.arch)
+        .on('disabled', async (config) => {
+          this.debug('hardware: %s', config.hwInfo.prettyName)
+          this.debug('os: %s', config.osInfo.prettyName)
           if (!config.supported) {
             this.warn('unsupported platform')
           }
-          this.fatal(
+          await this.fatal(
             '%s%s disabled', config.adapter,
             config.address == null ? '' : ' [' + config.address + ']'
           )
@@ -232,17 +304,45 @@ class Main extends homebridgeLib.CommandLineTool {
     return clargs
   }
 
-  createDelegate (device, bleError = true) {
+  async find (address = process.env.SOMA_DEVICE) {
+    if (address == null || address === '') {
+      throw new UsageError(
+        `Missing device name or mac address.  Set ${b('SOMA_DEVICE')} or specify as argument.`
+      )
+    } else if (homebridgeLib.OptionParser.patterns.mac.test(address)) {
+      address = address.toUpperCase().replace(/[-]/g, ':')
+    }
+    return new Promise((resolve, reject) => {
+      let found = false
+      const timer = setTimeout(() => {
+        reject(new Error(`${address}: device not found`))
+      }, this._clargs.options.timeout * 1000)
+      this.client.on('shadeFound', async (device) => {
+        try {
+          if ((device.address === address || device.data.displayName === address) && !found) {
+            found = true
+            clearTimeout(timer)
+            resolve(device)
+          }
+        } catch (error) {
+          if (!(error instanceof SomaClient.BleError)) {
+            this.warn(error)
+          }
+        }
+      })
+    })
+  }
+
+  async createDelegate (address) {
+    const device = await this.find(address)
     const delegate = new SomaClient.SomaPeripheral(this.client, device)
     delegate
       .on('error', (error) => {
         if (error instanceof SomaClient.BleError) {
-          if (bleError || this.debug) {
-            this.warn(
-              '%s: request %d: %s: %s', delegate.id, error.request.id,
-              error.request.request, error
-            )
-          }
+          this.warn(
+            '%s: request %d: %s: %s', delegate.id, error.request.id,
+            error.request.request, error
+          )
           return
         }
         this.error('%s: %s', delegate.id, error)
@@ -300,7 +400,7 @@ class Main extends homebridgeLib.CommandLineTool {
         if (found[device.id] == null) {
           found[device.id] = device
           const type = device.data.venetianMode ? 'Tilt' : 'Smart Shades'
-          this.log(
+          this.print(
             '%s: %s (%s), position: %j%%, battery: %j%%, rssi: %d',
             device.address, device.data.displayName, type,
             device.data.currentPosition, device.data.battery,
@@ -311,14 +411,10 @@ class Main extends homebridgeLib.CommandLineTool {
     return homebridgeLib.timeout(this._clargs.options.timeout * 1000)
   }
 
-  async find (address = process.env.SOMA_DEVICE) {
-    if (address == null || address === '') {
-      throw new UsageError(
-        `Missing device name or mac address.  Set ${b('SOMA_DEVICE')} or specify ${b('-S')}.`
-      )
-    } else if (homebridgeLib.OptionParser.patterns.mac.test(address)) {
-      address = address.toUpperCase().replace(/[-]/g, ':')
-    }
+  async printPosition (delegate, includeAllInfo = false) {
+    const address = delegate.address
+    await delegate.disconnect()
+    await this.client.search()
     return new Promise((resolve, reject) => {
       let found = false
       const timer = setTimeout(() => {
@@ -326,10 +422,21 @@ class Main extends homebridgeLib.CommandLineTool {
       }, this._clargs.options.timeout * 1000)
       this.client.on('shadeFound', async (device) => {
         try {
-          if ((device.address === address || device.data.displayName === address) && !found) {
+          if (device.address === address && !found) {
             found = true
             clearTimeout(timer)
-            resolve(this.createDelegate(device))
+            if (includeAllInfo) {
+              const type = device.data.venetianMode ? 'Tilt' : 'Smart Shades'
+              this.print(
+                '%s: %s (%s), position: %j%%, battery: %j%%, rssi: %d',
+                device.address, device.data.displayName, type,
+                device.data.currentPosition, device.data.battery,
+                device.peripheral.rssi
+              )
+            } else {
+              this.print('%d%', device.data.currentPosition)
+            }
+            resolve(device)
           }
         } catch (error) {
           if (!(error instanceof SomaClient.BleError)) {
@@ -340,7 +447,7 @@ class Main extends homebridgeLib.CommandLineTool {
     })
   }
 
-  async _parse (...args) {
+  _parse (...args) {
     let address
     const parser = new homebridgeLib.CommandLineParser(packageJson)
     parser
@@ -354,28 +461,96 @@ class Main extends homebridgeLib.CommandLineTool {
         }
       })
       .parse(...args)
-    return this.find(address)
+    return address
   }
 
   async probe (...args) {
-    const delegate = await this._parse(...args)
+    const address = this._parse(...args)
+    const delegate = await this.createDelegate(address)
     const map = await delegate.readAll()
     await delegate.disconnect()
     const jsonFormatter = new homebridgeLib.JsonFormatter()
     this.print(jsonFormatter.stringify(map))
   }
 
-  async info (delegate) {
-
+  async info (...args) {
+    const address = this._parse(...args)
+    const delegate = await this.createDelegate(address)
+    return this.printPosition(delegate, true)
   }
 
   async open (...args) {
-    const delegate = await this._parse(...args)
-    await delegate.open()
+    const address = this._parse(...args)
+    const delegate = await this.createDelegate(address)
+    await delegate.setPosition(delegate.venetianMode ? 50 : 0)
+    return this.printPosition(delegate)
   }
 
   async close (...args) {
+    let address
+    let up
+    const parser = new homebridgeLib.CommandLineParser(packageJson)
+    parser
+      .help('h', 'help', this.help)
+      .remaining((list) => {
+        if (list.length > 2) {
+          throw new UsageError('too many arguments')
+        }
+        if (list.length === 2) {
+          address = homebridgeLib.OptionParser.toString('address', list[0], true)
+          if (list[1] === 'up' || list[1] === 'down') {
+            up = list[1] === 'up'
+          } else {
+            throw new UsageError(`${list[1]}: invalid direction`)
+          }
+        } else if (list.length === 1) {
+          if (list[0] === 'up' || list[0] === 'down') {
+            up = list[0] === 'up'
+          } else {
+            address = homebridgeLib.OptionParser.toString('address', list[0], true)
+          }
+        }
+      })
+      .parse(...args)
+    const delegate = await this.createDelegate(address)
+    await delegate.setPosition(delegate.venetianMode ? (up ? 0 : 100) : 100)
+    return this.printPosition(delegate)
+  }
 
+  async stop (...args) {
+    const address = this._parse(...args)
+    const delegate = await this.createDelegate(address)
+    await delegate.stop()
+    return this.printPosition(delegate)
+  }
+
+  async position (...args) {
+    let address
+    let position
+    const parser = new homebridgeLib.CommandLineParser(packageJson)
+    parser
+      .help('h', 'help', this.help)
+      .remaining((list) => {
+        if (list.length > 2) {
+          throw new UsageError('too many arguments')
+        }
+        if (list.length === 2) {
+          address = homebridgeLib.OptionParser.toString('address', list[0], true)
+          position = homebridgeLib.OptionParser.toInt('position', list[1], -100, 100)
+        } else if (list.length === 1) {
+          position = homebridgeLib.OptionParser.toInt('position', list[0], -100, 100)
+        }
+      })
+      .parse(...args)
+    const delegate = await this.createDelegate(address)
+    if (position != null) {
+      if (delegate.venetianMode) {
+        position += 100
+        position /= 2
+      }
+      await delegate.setPosition(position)
+    }
+    return this.printPosition(delegate)
   }
 }
 
