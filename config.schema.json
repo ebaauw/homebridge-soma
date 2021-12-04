@@ -34,8 +34,7 @@
           "type": "string"
         }
       },
-      "timeout":
-      {
+      "timeout": {
         "description": "The timeout in seconds to wait for a response from a SOMA device.  Default: 15.",
         "type": "integer",
         "minimum": 1,
