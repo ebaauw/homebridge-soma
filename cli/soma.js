@@ -25,7 +25,11 @@ const usage = {
   close: `${b('close')} [${b('-h')}] ${u('device')} [${b('down')}|${b('up')}]`,
   stop: `${b('stop')} [${b('-h')}] ${u('device')}`,
 
-  position: `${b('position')} [${b('-hm')}] ${u('device')} [${b('--')}] [${u('position')}]`
+  position: `${b('position')} [${b('-hm')}] ${u('device')} [${b('--')}] [${u('position')}]`,
+  up: `${b('up')} ${u('device')}`,
+  down: `${b('down')} ${u('device')}`,
+  stepUp: `${b('stepUp')} ${u('device')}`,
+  stepDown: `${b('stepDown')} ${u('device')}`
 }
 
 const description = {
@@ -38,7 +42,11 @@ const description = {
   close: 'Close device.',
   stop: 'Stop current movement.',
 
-  position: 'Get or set position.'
+  position: 'Get or set position.',
+  up: 'Move up.',
+  down: 'Move down.',
+  stepUp: 'Step Up.',
+  stepDown: 'Step Down.'
 }
 
 const help = {
@@ -83,6 +91,18 @@ Commands:
 
   ${usage.position}
   ${description.position}
+
+  ${usage.up}
+  ${description.up}
+
+  ${usage.down}
+  ${description.down}
+
+  ${usage.stepUp}
+  ${description.stepUp}
+
+  ${usage.stepDown}
+  ${description.stepDown}
 
 For more help, issue: ${b('soma')} ${u('command')} ${b('-h')}`,
   discover: `${description.discover}
@@ -159,7 +179,47 @@ Parameters:
   ${u('position')}
   Position to set the SOMA device to.
   For Shades devices: from 0% (open) to 100% (closed).
-  For Tilt devices: from -100% (closed up) to 0% (open) to 100% (closed down).`
+  For Tilt devices: from -100% (closed up) to 0% (open) to 100% (closed down).`,
+  up: `${description.up}
+
+Usage: ${b('soma')} ${usage.up}
+
+Parameters:
+  ${b('-h')}, ${b('--help')}
+  Print this help and exit.
+
+  ${u('device')}
+  Display name or mac address of the device to move up.`,
+  down: `${description.down}
+
+Usage: ${b('soma')} ${usage.down}
+
+Parameters:
+  ${b('-h')}, ${b('--help')}
+  Print this help and exit.
+
+  ${u('device')}
+  Display name or mac address of the device to move down.`,
+  stepUp: `${description.stepUp}
+
+Usage: ${b('soma')} ${usage.stepUp}
+
+Parameters:
+  ${b('-h')}, ${b('--help')}
+  Print this help and exit.
+
+  ${u('device')}
+  Display name or mac address of the device to step up.`,
+  stepDown: `${description.stepDown}
+
+Usage: ${b('soma')} ${usage.stepDownstepDown}
+
+Parameters:
+  ${b('-h')}, ${b('--help')}
+  Print this help and exit.
+
+  ${u('device')}
+  Display name or mac address of the device to step down.`
 }
 
 class Main extends homebridgeLib.CommandLineTool {
@@ -378,11 +438,11 @@ class Main extends homebridgeLib.CommandLineTool {
       })
       .on('notification', (notification) => {
         this.vdebug(
-          'notification: %s/%s: %s', notification.serviceKey,
+          '%s: notification: %s/%s: %s', delegate.id, notification.serviceKey,
           notification.key, bufferToHex(notification.buffer)
         )
         this.debug(
-          'notification: %s/%s: %j', notification.serviceKey,
+          '%s: notification: %s/%s: %j', delegate.id, notification.serviceKey,
           notification.key, notification.parsedValue
         )
       })
@@ -520,7 +580,7 @@ class Main extends homebridgeLib.CommandLineTool {
   async stop (...args) {
     const address = this._parse(...args)
     const delegate = await this.createDelegate(address)
-    await delegate.stop()
+    await delegate.stopAtNextStep()
     return this.printPosition(delegate)
   }
 
@@ -550,6 +610,34 @@ class Main extends homebridgeLib.CommandLineTool {
       }
       await delegate.setPosition(position)
     }
+    return this.printPosition(delegate)
+  }
+
+  async up (...args) {
+    const address = this._parse(...args)
+    const delegate = await this.createDelegate(address)
+    await delegate.up()
+    return this.printPosition(delegate)
+  }
+
+  async down (...args) {
+    const address = this._parse(...args)
+    const delegate = await this.createDelegate(address)
+    await delegate.down()
+    return this.printPosition(delegate)
+  }
+
+  async stepUp (...args) {
+    const address = this._parse(...args)
+    const delegate = await this.createDelegate(address)
+    await delegate.stepUp()
+    return this.printPosition(delegate)
+  }
+
+  async stepDown (...args) {
+    const address = this._parse(...args)
+    const delegate = await this.createDelegate(address)
+    await delegate.stepDown()
     return this.printPosition(delegate)
   }
 }
