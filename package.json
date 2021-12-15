@@ -26,7 +26,7 @@
   "dependencies": {
     "@abandonware/noble": "^1.9.2-15",
     "he": "^1.2.0",
-    "homebridge-lib": "5.1.22-0",
+    "homebridge-lib": "~5.1.22",
     "semver": "^7.3.5",
     "xml2js": "^0.4.23"
   },
