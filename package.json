@@ -19,7 +19,7 @@
     "soma": "cli/soma.js"
   },
   "engines": {
-    "homebridge": "^1.3.8",
+    "homebridge": "^1.3.9",
     "node": "^16.13.1",
     "soma": "2.2.10",
     "soma_6": "2.2.8"
@@ -27,7 +27,7 @@
   "dependencies": {
     "@abandonware/noble": "^1.9.2-15",
     "he": "^1.2.0",
-    "homebridge-lib": "~5.1.22",
+    "homebridge-lib": "~5.1.23",
     "semver": "^7.3.5",
     "xml2js": "^0.4.23"
   },
